@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Double Star Capacitor Bank Unbalance Optimizer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="Parameters">
+        <div>
+          <h1>Double Star Capacitor Bank Unbalance Optimizer</h1>
+          <p>18 capacitors, 2 stars, and 3 capacitors in each R/Y/B branch.</p>
+        </div>
+        <div class="actions">
+          <button id="loadExample" type="button" title="Load a sample set with realistic tolerance">Example</button>
+          <button id="resetLayout" type="button" title="Restore the default layout and nominal capacitance">Reset</button>
+        </div>
+      </section>
+
+      <section class="settings-band" aria-label="System settings">
+        <label>
+          <span>Line voltage kV</span>
+          <input id="lineVoltage" type="number" min="0" step="0.1" value="11" />
+        </label>
+        <label>
+          <span>Frequency Hz</span>
+          <input id="frequency" type="number" min="0" step="1" value="50" />
+        </label>
+        <label>
+          <span>Nominal capacitance μF</span>
+          <input id="nominalCap" type="number" min="0" step="0.01" value="22" />
+        </label>
+        <label>
+          <span>Search depth</span>
+          <select id="maxDepth">
+            <option value="1">Up to 1 swap</option>
+            <option value="2">Up to 2 swaps</option>
+            <option value="3" selected>Up to 3 swaps</option>
+            <option value="4">Up to 4 swaps</option>
+            <option value="5">Up to 5 swaps</option>
+            <option value="6">Up to 6 swaps</option>
+          </select>
+        </label>
+        <label>
+          <span>Search width</span>
+          <select id="beamWidth">
+            <option value="80">Fast</option>
+            <option value="180" selected>Balanced</option>
+            <option value="400">Deep</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="metrics-grid" aria-live="polite">
+        <article class="metric">
+          <span>Current unbalance current</span>
+          <strong id="currentUnbalance">0 A</strong>
+        </article>
+        <article class="metric">
+          <span>Optimized unbalance current</span>
+          <strong id="bestUnbalance">0 A</strong>
+        </article>
+        <article class="metric">
+          <span>Improvement</span>
+          <strong id="improvement">0%</strong>
+        </article>
+        <article class="metric">
+          <span>Capacitors moved</span>
+          <strong id="movedCount">0</strong>
+        </article>
+      </section>
+
+      <section class="work-area">
+        <div class="bank" id="bank" aria-label="Capacitor layout"></div>
+
+        <aside class="results" aria-label="Calculation results">
+          <div class="panel">
+            <div class="panel-head">
+              <h2>Swap Recommendation</h2>
+              <div class="button-row">
+                <button id="optimize" type="button">Optimize</button>
+                <button id="applyBest" type="button" disabled>Apply</button>
+              </div>
+            </div>
+            <ol id="swapList" class="swap-list"></ol>
+          </div>
+
+          <div class="panel">
+            <h2>Best By Depth</h2>
+            <div id="depthTable" class="depth-table"></div>
+          </div>
+
+          <div class="panel">
+            <h2>Calculation Details</h2>
+            <div id="detailList" class="detail-list"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="formula-band">
+        <h2>Model</h2>
+        <p>
+          Each branch current is calculated as <code>I = 2πfCVphase</code>. The R/Y/B phase
+          angles are <code>0° / -120° / +120°</code>. Each star residual is the vector sum of
+          its three phase branch currents; the double-star neutral bridge unbalance current is
+          calculated as <code>|N1 - N2|</code>.
+        </p>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
