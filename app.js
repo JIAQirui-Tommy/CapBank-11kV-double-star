@@ -11,7 +11,7 @@ const bankEl = document.querySelector("#bank");
 const lineVoltageEl = document.querySelector("#lineVoltage");
 const frequencyEl = document.querySelector("#frequency");
 const nominalCapEl = document.querySelector("#nominalCap");
-const maxDepthEl = document.querySelector("#maxDepth");
+const swapPairsEl = document.querySelector("#swapPairs");
 const beamWidthEl = document.querySelector("#beamWidth");
 const currentUnbalanceEl = document.querySelector("#currentUnbalance");
 const bestUnbalanceEl = document.querySelector("#bestUnbalance");
@@ -24,6 +24,7 @@ const applyBestEl = document.querySelector("#applyBest");
 
 let capacitors = [];
 let lastBest = null;
+let appliedHighlights = new Map();
 
 function slotMeta(index) {
   const branchSize = SLOTS_PER_BRANCH;
@@ -67,6 +68,12 @@ function formatPercent(value) {
   return `${value.toFixed(1)}%`;
 }
 
+function clearRenderedHighlights() {
+  document.querySelectorAll(".cap-slot").forEach((slot) => {
+    slot.classList.remove("is-moved", "move-a", "move-b", "move-c", "move-d", "move-e", "move-f");
+  });
+}
+
 function renderBank() {
   bankEl.innerHTML = "";
   STARS.forEach((starName, starIndex) => {
@@ -97,11 +104,13 @@ function renderBank() {
           phaseIndex * SLOTS_PER_BRANCH +
           slot;
         const cap = capacitors[index];
+        const highlightClass = appliedHighlights.get(cap.id);
         const slotEl = document.createElement("label");
-        slotEl.className = "cap-slot";
+        slotEl.className = `cap-slot ${highlightClass ? `is-moved ${highlightClass}` : ""}`;
         slotEl.innerHTML = `
           <div class="slot-top">
             <span class="cap-id">${cap.id}</span>
+            <span class="cap-badge">Moved</span>
             <span class="cap-pos">${phase.key}${slot + 1}</span>
           </div>
           <input data-index="${index}" type="number" min="0" step="0.01" value="${cap.uf}" aria-label="${cap.id} capacity microfarads" />
@@ -206,7 +215,7 @@ function swapsFromParents(state) {
   return swaps.reverse();
 }
 
-function optimizeLayout(original, maxDepth, beamWidth) {
+function optimizeLayout(original, swapPairs, beamWidth) {
   const system = getSystem();
   const initialScore = calculate(original, system).unbalance;
   const bestByDepth = [
@@ -216,33 +225,38 @@ function optimizeLayout(original, maxDepth, beamWidth) {
       depth: 0,
       parent: null,
       swap: null,
+      usedIndices: new Set(),
     },
   ];
 
   let frontier = bestByDepth;
-  let best = bestByDepth[0];
   const pairList = [];
   for (let a = 0; a < TOTAL_CAPS - 1; a += 1) {
     for (let b = a + 1; b < TOTAL_CAPS; b += 1) pairList.push([a, b]);
   }
 
-  for (let depth = 1; depth <= maxDepth; depth += 1) {
+  for (let depth = 1; depth <= swapPairs; depth += 1) {
     const candidates = [];
     const seenAtDepth = new Set();
 
     frontier.forEach((state) => {
       pairList.forEach(([a, b]) => {
+        if (state.usedIndices.has(a) || state.usedIndices.has(b)) return;
         const layout = swapLayout(state.layout, a, b);
         const key = layoutKey(layout);
         if (seenAtDepth.has(key)) return;
         seenAtDepth.add(key);
         const score = calculate(layout, system).unbalance;
+        const usedIndices = new Set(state.usedIndices);
+        usedIndices.add(a);
+        usedIndices.add(b);
         candidates.push({
           layout,
           score,
           depth,
           parent: state,
           swap: [a, b],
+          usedIndices,
         });
       });
     });
@@ -254,16 +268,9 @@ function optimizeLayout(original, maxDepth, beamWidth) {
 
     frontier = candidates.slice(0, beamWidth);
     bestByDepth[depth] = frontier[0] || bestByDepth[depth - 1];
-    if (
-      bestByDepth[depth].score < best.score - 1e-12 ||
-      (Math.abs(bestByDepth[depth].score - best.score) < 1e-12 &&
-        movedFromOriginal(bestByDepth[depth].layout, original) < movedFromOriginal(best.layout, original))
-    ) {
-      best = bestByDepth[depth];
-    }
   }
 
-  return { best, bestByDepth };
+  return { best: bestByDepth[swapPairs] || bestByDepth[bestByDepth.length - 1], bestByDepth };
 }
 
 function updateSummary(bestState = lastBest) {
@@ -348,6 +355,7 @@ function loadExample() {
     uf,
   }));
   lastBest = null;
+  appliedHighlights = new Map();
   applyBestEl.disabled = true;
   renderBank();
   updateSummary();
@@ -356,6 +364,7 @@ function loadExample() {
 function resetLayout() {
   capacitors = makeDefaultCaps();
   lastBest = null;
+  appliedHighlights = new Map();
   applyBestEl.disabled = true;
   renderBank();
   updateSummary();
@@ -363,24 +372,44 @@ function resetLayout() {
 
 bankEl.addEventListener("input", () => {
   lastBest = null;
+  appliedHighlights = new Map();
   applyBestEl.disabled = true;
   updateSummary();
+  clearRenderedHighlights();
 });
 
 [lineVoltageEl, frequencyEl, nominalCapEl].forEach((el) => {
   el.addEventListener("input", () => updateSummary(lastBest));
 });
 
+[swapPairsEl, beamWidthEl].forEach((el) => {
+  el.addEventListener("change", () => {
+    lastBest = null;
+    applyBestEl.disabled = true;
+    updateSummary();
+  });
+});
+
 document.querySelector("#optimize").addEventListener("click", () => {
   syncCapsFromInputs();
-  const maxDepth = Number.parseInt(maxDepthEl.value, 10);
+  const swapPairs = Number.parseInt(swapPairsEl.value, 10);
   const beamWidth = Number.parseInt(beamWidthEl.value, 10);
-  const result = optimizeLayout(capacitors, maxDepth, beamWidth);
+  const result = optimizeLayout(capacitors, swapPairs, beamWidth);
   renderOptimization(result);
 });
 
 applyBestEl.addEventListener("click", () => {
   if (!lastBest) return;
+  const swaps = swapsFromParents(lastBest);
+  const palette = ["move-a", "move-b", "move-c", "move-d", "move-e", "move-f"];
+  let cursorLayout = capacitors.slice();
+  appliedHighlights = new Map();
+  swaps.forEach(([a, b], index) => {
+    const moveClass = palette[index % palette.length];
+    appliedHighlights.set(cursorLayout[a].id, moveClass);
+    appliedHighlights.set(cursorLayout[b].id, moveClass);
+    cursorLayout = swapLayout(cursorLayout, a, b);
+  });
   capacitors = lastBest.layout.map((cap) => ({ ...cap }));
   lastBest = null;
   applyBestEl.disabled = true;
