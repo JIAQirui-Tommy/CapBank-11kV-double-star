@@ -241,6 +241,9 @@ select {
   border-bottom: 1px solid #edf1f4;
   display: grid;
   gap: 8px;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .cap-slot:last-child {
@@ -257,6 +260,54 @@ select {
 .cap-id {
   font-weight: 700;
   font-size: 13px;
+}
+
+.cap-badge {
+  display: none;
+  min-width: 52px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.cap-slot.is-moved .cap-badge {
+  display: inline-block;
+}
+
+.cap-slot.is-moved {
+  box-shadow: inset 4px 0 0 currentColor;
+}
+
+.cap-slot.move-a {
+  color: #9f3a38;
+  background: #fff0ef;
+}
+
+.cap-slot.move-b {
+  color: #1f6f5c;
+  background: #edf8f4;
+}
+
+.cap-slot.move-c {
+  color: #295fa5;
+  background: #eef5ff;
+}
+
+.cap-slot.move-d {
+  color: #8a5a13;
+  background: #fff7e6;
+}
+
+.cap-slot.move-e {
+  color: #6f4aa2;
+  background: #f5f0ff;
+}
+
+.cap-slot.move-f {
+  color: #37505c;
+  background: #eef3f5;
 }
 
 .cap-pos {
@@ -308,7 +359,7 @@ button:disabled {
 }
 
 .swap-list:empty::before {
-  content: "The current layout is already best within the search range, or optimization has not been run yet.";
+  content: "Run optimization to see the best result for the selected number of swap pairs.";
   color: var(--muted);
 }
 
