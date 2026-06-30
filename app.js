@@ -21,9 +21,11 @@ const swapListEl = document.querySelector("#swapList");
 const depthTableEl = document.querySelector("#depthTable");
 const detailListEl = document.querySelector("#detailList");
 const applyBestEl = document.querySelector("#applyBest");
+const exportRecordEl = document.querySelector("#exportRecord");
 
 let capacitors = [];
 let lastBest = null;
+let lastSwapRecord = null;
 let appliedHighlights = new Map();
 
 function slotMeta(index) {
@@ -217,6 +219,107 @@ function swapsFromParents(state) {
   return swaps.reverse();
 }
 
+function buildSwapRows(initialLayout, swaps) {
+  const rows = [];
+  let cursorLayout = initialLayout.slice();
+  swaps.forEach(([a, b], index) => {
+    const firstCap = cursorLayout[a];
+    const secondCap = cursorLayout[b];
+    rows.push({
+      pair: index + 1,
+      firstCap: firstCap.id,
+      firstFrom: slotMeta(a).label,
+      firstTo: slotMeta(b).label,
+      firstUf: firstCap.uf,
+      secondCap: secondCap.id,
+      secondFrom: slotMeta(b).label,
+      secondTo: slotMeta(a).label,
+      secondUf: secondCap.uf,
+    });
+    cursorLayout = swapLayout(cursorLayout, a, b);
+  });
+  return rows;
+}
+
+function createSwapRecord(bestState) {
+  const initialLayout = capacitors.map((cap) => ({ ...cap }));
+  const finalLayout = bestState.layout.map((cap) => ({ ...cap }));
+  const swaps = swapsFromParents(bestState);
+  const before = calculate(initialLayout);
+  const after = calculate(finalLayout);
+  const improvement =
+    before.unbalance > 0 ? ((before.unbalance - after.unbalance) / before.unbalance) * 100 : 0;
+
+  return {
+    createdAt: new Date().toISOString(),
+    lineKv: readNumber(lineVoltageEl, 11),
+    frequency: readNumber(frequencyEl, 50),
+    nominalUf: readNumber(nominalCapEl, 22),
+    selectedSwapPairs: Number.parseInt(swapPairsEl.value, 10),
+    beforeUnbalance: before.unbalance,
+    afterUnbalance: after.unbalance,
+    improvement,
+    movedCount: movedFromOriginal(finalLayout, initialLayout),
+    rows: buildSwapRows(initialLayout, swaps),
+  };
+}
+
+function csvEscape(value) {
+  const text = String(value ?? "");
+  return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function exportSwapRecord() {
+  if (!lastSwapRecord) return;
+  const summaryRows = [
+    ["Double Star Capacitor Bank Swap Record"],
+    ["Created At", lastSwapRecord.createdAt],
+    ["Line Voltage kV", lastSwapRecord.lineKv],
+    ["Frequency Hz", lastSwapRecord.frequency],
+    ["Nominal Capacitance uF", lastSwapRecord.nominalUf],
+    ["Selected Swap Pairs", lastSwapRecord.selectedSwapPairs],
+    ["Before Unbalance A", lastSwapRecord.beforeUnbalance.toFixed(6)],
+    ["After Unbalance A", lastSwapRecord.afterUnbalance.toFixed(6)],
+    ["Improvement %", lastSwapRecord.improvement.toFixed(3)],
+    ["Capacitors Moved", lastSwapRecord.movedCount],
+    [],
+    [
+      "Pair",
+      "Capacitor A",
+      "A From",
+      "A To",
+      "A Capacitance uF",
+      "Capacitor B",
+      "B From",
+      "B To",
+      "B Capacitance uF",
+    ],
+  ];
+  const swapRows = lastSwapRecord.rows.map((row) => [
+    row.pair,
+    row.firstCap,
+    row.firstFrom,
+    row.firstTo,
+    row.firstUf.toFixed(3),
+    row.secondCap,
+    row.secondFrom,
+    row.secondTo,
+    row.secondUf.toFixed(3),
+  ]);
+  const csv = [...summaryRows, ...swapRows]
+    .map((row) => row.map(csvEscape).join(","))
+    .join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `capbank-swap-record-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function optimizeLayout(original, swapPairs, beamWidth) {
   const system = getSystem();
   const initialScore = calculate(original, system).unbalance;
@@ -328,6 +431,8 @@ function renderDetails(result) {
 
 function renderOptimization(result) {
   lastBest = result.best;
+  lastSwapRecord = createSwapRecord(result.best);
+  exportRecordEl.disabled = lastSwapRecord.rows.length === 0;
   updateSummary(result.best);
 
   const swaps = swapsFromParents(result.best);
@@ -367,8 +472,10 @@ function loadExample() {
     uf,
   }));
   lastBest = null;
+  lastSwapRecord = null;
   appliedHighlights = new Map();
   applyBestEl.disabled = true;
+  exportRecordEl.disabled = true;
   renderBank();
   updateSummary();
 }
@@ -376,16 +483,20 @@ function loadExample() {
 function resetLayout() {
   capacitors = makeDefaultCaps();
   lastBest = null;
+  lastSwapRecord = null;
   appliedHighlights = new Map();
   applyBestEl.disabled = true;
+  exportRecordEl.disabled = true;
   renderBank();
   updateSummary();
 }
 
 bankEl.addEventListener("input", () => {
   lastBest = null;
+  lastSwapRecord = null;
   appliedHighlights = new Map();
   applyBestEl.disabled = true;
+  exportRecordEl.disabled = true;
   updateSummary();
   clearRenderedHighlights();
 });
@@ -397,7 +508,9 @@ bankEl.addEventListener("input", () => {
 [swapPairsEl, beamWidthEl].forEach((el) => {
   el.addEventListener("change", () => {
     lastBest = null;
+    lastSwapRecord = null;
     applyBestEl.disabled = true;
+    exportRecordEl.disabled = true;
     updateSummary();
   });
 });
@@ -429,6 +542,7 @@ applyBestEl.addEventListener("click", () => {
   updateSummary();
 });
 
+exportRecordEl.addEventListener("click", exportSwapRecord);
 document.querySelector("#loadExample").addEventListener("click", loadExample);
 document.querySelector("#resetLayout").addEventListener("click", resetLayout);
 
