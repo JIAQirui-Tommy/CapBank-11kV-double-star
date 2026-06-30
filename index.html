@@ -102,10 +102,10 @@
       <section class="formula-band">
         <h2>Model</h2>
         <p>
-          Each branch current is calculated as <code>I = 2πfCVphase</code>. The R/Y/B phase
-          angles are <code>0° / -120° / +120°</code>. Each star residual is the vector sum of
-          its three phase branch currents; the double-star neutral bridge unbalance current is
-          calculated as <code>|N1 - N2|</code>.
+          The engineering model sums each branch capacitance, calculates <code>S1-S5</code>,
+          then uses <code>bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)</code>. The double-star
+          neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, rounded up
+          to the next <code>0.001 A</code>.
         </p>
       </section>
     </main>
