@@ -56,11 +56,11 @@
       <section class="metrics-grid" aria-live="polite">
         <article class="metric">
           <span>Current unbalance current</span>
-          <strong id="currentUnbalance">0 A</strong>
+          <strong id="currentUnbalance">0.000 mA</strong>
         </article>
         <article class="metric">
           <span>Recommended unbalance current</span>
-          <strong id="bestUnbalance">0 A</strong>
+          <strong id="bestUnbalance">0.000 mA</strong>
         </article>
         <article class="metric">
           <span>Improvement</span>
@@ -105,8 +105,8 @@
         <p>
           The engineering model sums each branch capacitance, calculates <code>S1-S5</code>,
           then uses <code>bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)</code>. The double-star
-          neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, rounded up
-          to the next <code>0.001 A</code>.
+          neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, shown in
+          <code>mA</code> and rounded up to the next <code>0.001 mA</code>.
         </p>
       </section>
     </main>
