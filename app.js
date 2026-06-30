@@ -139,28 +139,8 @@ function getSystem() {
   };
 }
 
-function vectorFromPolar(magnitude, degrees) {
-  const radians = (degrees * Math.PI) / 180;
-  return {
-    re: magnitude * Math.cos(radians),
-    im: magnitude * Math.sin(radians),
-  };
-}
-
-function addVector(a, b) {
-  return { re: a.re + b.re, im: a.im + b.im };
-}
-
-function subVector(a, b) {
-  return { re: a.re - b.re, im: a.im - b.im };
-}
-
-function magnitude(v) {
-  return Math.hypot(v.re, v.im);
-}
-
 function calculate(layout, system = getSystem()) {
-  const vPhase = (system.lineKv * 1000) / Math.sqrt(3);
+  const lineVoltage = system.lineKv * 1000;
   const omega = 2 * Math.PI * system.frequency;
   const branchUf = Array.from({ length: STARS.length }, () =>
     Array.from({ length: PHASES.length }, () => 0),
@@ -171,23 +151,45 @@ function calculate(layout, system = getSystem()) {
     branchUf[meta.starIndex][PHASES.indexOf(meta.phase)] += cap.uf;
   });
 
-  const starVectors = branchUf.map((phaseSums) =>
-    phaseSums.reduce((sum, uf, phaseIndex) => {
-      const current = omega * (uf * 1e-6) * vPhase;
-      return addVector(sum, vectorFromPolar(current, PHASES[phaseIndex].angle));
-    }, { re: 0, im: 0 }),
-  );
+  const [ar, ay, ab] = branchUf[0];
+  const [br, by, bb] = branchUf[1];
+  const x = ar + ay + ab + br + by + bb;
 
-  const bridgeVector = {
-    re: subVector(starVectors[0], starVectors[1]).re,
-    im: subVector(starVectors[0], starVectors[1]).im,
+  const s1 = br * (ay - ab);
+  const s2 = ar * (bb - by);
+  const s3 = ay * bb - ab * by;
+  const s4 = ar * (by + bb);
+  const s5 = br * (ay + ab);
+  const realTerm = s1 + s2 + 2 * s3;
+  const imagTerm = s4 - s5;
+  const bal = Math.sqrt(realTerm * realTerm + 3 * imagTerm * imagTerm);
+
+  const rawUnbalance = x > 0 ? (0.001 * lineVoltage * omega * bal) / (2 * x) : 0;
+  const unbalance = Math.ceil(rawUnbalance * 1000) / 1000;
+
+  const engineering = {
+    ar,
+    ay,
+    ab,
+    br,
+    by,
+    bb,
+    x,
+    s1,
+    s2,
+    s3,
+    s4,
+    s5,
+    realTerm,
+    imagTerm,
+    bal,
+    rawUnbalance,
   };
 
   return {
-    unbalance: magnitude(bridgeVector),
+    unbalance,
     branchUf,
-    starResiduals: starVectors.map(magnitude),
-    bridgeVector,
+    engineering,
   };
 }
 
@@ -285,9 +287,12 @@ function updateSummary(bestState = lastBest) {
   improvementEl.textContent = formatPercent(Math.max(0, improvement));
   movedCountEl.textContent = `${bestState ? movedFromOriginal(bestState.layout, capacitors) : 0}`;
 
-  current.starResiduals.forEach((residual, index) => {
+  const starCapacitanceTotals = current.branchUf.map((phaseSums) =>
+    phaseSums.reduce((total, uf) => total + uf, 0),
+  );
+  starCapacitanceTotals.forEach((total, index) => {
     const el = document.querySelector(`#star-${index}-residual`);
-    if (el) el.textContent = `Residual ${formatAmps(residual)}`;
+    if (el) el.textContent = `Total ${total.toFixed(2)} μF`;
   });
 
   current.branchUf.forEach((star, starIndex) => {
@@ -302,12 +307,19 @@ function updateSummary(bestState = lastBest) {
 
 function renderDetails(result) {
   const phaseVoltage = readNumber(lineVoltageEl, 11) / Math.sqrt(3);
+  const e = result.engineering;
   const rows = [
     ["Phase voltage", `${phaseVoltage.toFixed(3)} kV`],
-    ["Star 1 residual vector", formatAmps(result.starResiduals[0])],
-    ["Star 2 residual vector", formatAmps(result.starResiduals[1])],
-    ["Bridge vector Re", `${result.bridgeVector.re.toFixed(6)} A`],
-    ["Bridge vector Im", `${result.bridgeVector.im.toFixed(6)} A`],
+    ["AR / AY / AB", `${e.ar.toFixed(3)} / ${e.ay.toFixed(3)} / ${e.ab.toFixed(3)} μF`],
+    ["BR / BY / BB", `${e.br.toFixed(3)} / ${e.by.toFixed(3)} / ${e.bb.toFixed(3)} μF`],
+    ["X total", `${e.x.toFixed(3)} μF`],
+    ["S1 / S2 / S3", `${e.s1.toFixed(6)} / ${e.s2.toFixed(6)} / ${e.s3.toFixed(6)}`],
+    ["S4 / S5", `${e.s4.toFixed(6)} / ${e.s5.toFixed(6)}`],
+    ["Real term", `${e.realTerm.toFixed(6)}`],
+    ["Imag term", `${e.imagTerm.toFixed(6)}`],
+    ["bal", `${e.bal.toFixed(6)}`],
+    ["Raw unbalance", formatAmps(e.rawUnbalance)],
+    ["Displayed unbalance", formatAmps(result.unbalance)],
   ];
   detailListEl.innerHTML = rows
     .map(([label, value]) => `<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`)
