@@ -60,10 +60,8 @@ function readNumber(el, fallback) {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function formatAmps(value) {
-  if (value >= 10) return `${value.toFixed(3)} A`;
-  if (value >= 1) return `${value.toFixed(4)} A`;
-  return `${(value * 1000).toFixed(2)} mA`;
+function formatMilliAmps(value) {
+  return `${value.toFixed(3)} mA`;
 }
 
 function formatPercent(value) {
@@ -84,7 +82,7 @@ function renderBank() {
     star.innerHTML = `
       <div class="star-header">
         <h2>${starName}</h2>
-        <span id="star-${starIndex}-residual">0 A</span>
+        <span id="star-${starIndex}-residual">0 μF</span>
       </div>
       <div class="phase-grid"></div>
     `;
@@ -278,8 +276,8 @@ function exportSwapRecord() {
     ["Frequency Hz", lastSwapRecord.frequency],
     ["Nominal Capacitance uF", lastSwapRecord.nominalUf],
     ["Selected Swap Pairs", lastSwapRecord.selectedSwapPairs],
-    ["Before Unbalance A", lastSwapRecord.beforeUnbalance.toFixed(6)],
-    ["After Unbalance A", lastSwapRecord.afterUnbalance.toFixed(6)],
+    ["Before Unbalance mA", lastSwapRecord.beforeUnbalance.toFixed(6)],
+    ["After Unbalance mA", lastSwapRecord.afterUnbalance.toFixed(6)],
     ["Improvement %", lastSwapRecord.improvement.toFixed(3)],
     ["Capacitors Moved", lastSwapRecord.movedCount],
     [],
@@ -385,8 +383,8 @@ function updateSummary(bestState = lastBest) {
   const improvement =
     current.unbalance > 0 ? ((current.unbalance - best.unbalance) / current.unbalance) * 100 : 0;
 
-  currentUnbalanceEl.textContent = formatAmps(current.unbalance);
-  bestUnbalanceEl.textContent = formatAmps(best.unbalance);
+  currentUnbalanceEl.textContent = formatMilliAmps(current.unbalance);
+  bestUnbalanceEl.textContent = formatMilliAmps(best.unbalance);
   improvementEl.textContent = formatPercent(Math.max(0, improvement));
   movedCountEl.textContent = `${bestState ? movedFromOriginal(bestState.layout, capacitors) : 0}`;
 
@@ -421,8 +419,8 @@ function renderDetails(result) {
     ["Real term", `${e.realTerm.toFixed(6)}`],
     ["Imag term", `${e.imagTerm.toFixed(6)}`],
     ["bal", `${e.bal.toFixed(6)}`],
-    ["Raw unbalance", formatAmps(e.rawUnbalance)],
-    ["Displayed unbalance", formatAmps(result.unbalance)],
+    ["Raw unbalance", formatMilliAmps(e.rawUnbalance)],
+    ["Displayed unbalance", formatMilliAmps(result.unbalance)],
   ];
   detailListEl.innerHTML = rows
     .map(([label, value]) => `<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`)
@@ -456,7 +454,7 @@ function renderOptimization(result) {
     row.innerHTML = `
       <span>${depth} swap${depth === 1 ? "" : "s"}</span>
       <div class="bar"><span style="width:${Math.min(100, width)}%"></span></div>
-      <strong>${formatAmps(state.score)}</strong>
+      <strong>${formatMilliAmps(state.score)}</strong>
     `;
     depthTableEl.appendChild(row);
   });
