@@ -9,7 +9,7 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Models a double-star capacitor bank with 18 capacitors.
 - Each star has three branches: Red, Yellow, and Blue.
 - Each branch contains three capacitors.
-- Capacitor labels follow the pattern `R11`, `R12`, `R13`, `Y11`, `B11`, `R21`, etc.
+- Capacitor labels follow the pattern `AR1`, `AR2`, `AY1`, `AB1`, `BR1`, `BY1`, `BB1`, etc.
 - Calculates the neutral unbalance current using the engineering formula from the original project.
 - Searches for capacitor swap recommendations to reduce unbalance current.
 - Allows the user to choose a fixed number of swap pairs or use Auto mode.
@@ -110,17 +110,19 @@ Click `Load CSV` to import measured capacitance values.
 Supported formats:
 
 ```text
-Capacitor,Capacitance uF
-R11,22.10
-R12,21.92
+Cap Unit,Value (in uF)
+AR1,24.40
+AR2,25.30
+AR3,24.60
+AY1,25.20
 ...
 ```
 
 or 18 numeric values in the same order as the on-screen layout:
 
 ```text
-22.10,21.92,22.03,21.77,22.14,22.05,22.28,21.88,22.08,
-21.98,22.18,21.86,22.04,21.80,22.16,21.93,22.25,22.01
+24.40,25.30,24.60,25.20,24.10,24.20,23.00,24.20,24.90,
+24.30,24.30,23.00,23.50,24.50,22.90,24.30,23.90,21.70
 ```
 
 ## How To Use
