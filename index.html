@@ -42,8 +42,6 @@
             <option value="2">2 pairs</option>
             <option value="3">3 pairs</option>
             <option value="4">4 pairs</option>
-            <option value="5">5 pairs</option>
-            <option value="6">6 pairs</option>
           </select>
         </label>
         <label>
@@ -109,12 +107,12 @@
           The engineering model sums each branch capacitance, calculates <code>S1-S5</code>,
           then uses <code>bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)</code>. The double-star
           neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, shown in
-          <code>mA</code>. Auto mode stops at the smallest swap count whose displayed current
-          rounds to <code>0.00 mA</code>.
+          <code>mA</code>. Auto mode checks up to 4 swap pairs, skips same-value swaps, and
+          stops at the smallest swap count whose displayed current rounds to <code>0.00 mA</code>.
         </p>
       </section>
     </main>
 
-    <script src="./app.js?v=cap-labels-1"></script>
+    <script src="./app.js?v=practical-swaps-1"></script>
   </body>
 </html>
