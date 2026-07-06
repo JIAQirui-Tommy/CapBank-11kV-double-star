@@ -6,6 +6,9 @@ const PHASES = [
 ];
 const SLOTS_PER_BRANCH = 3;
 const TOTAL_CAPS = STARS.length * PHASES.length * SLOTS_PER_BRANCH;
+const MAX_RECOMMENDED_SWAP_PAIRS = 4;
+const MIN_DISPLAYED_IMPROVEMENT_MA = 0.01;
+const SAME_CAPACITANCE_TOLERANCE_UF = 0.005;
 
 const bankEl = document.querySelector("#bank");
 const lineVoltageEl = document.querySelector("#lineVoltage");
@@ -87,6 +90,10 @@ function clearOptimizationState() {
 
 function roundsToDisplayedZero(value) {
   return Number(value.toFixed(2)) === 0;
+}
+
+function isMeaningfulSwap(layout, a, b) {
+  return Math.abs(layout[a].uf - layout[b].uf) >= SAME_CAPACITANCE_TOLERANCE_UF;
 }
 
 function renderBank() {
@@ -430,8 +437,18 @@ function exportSwapRecord() {
   URL.revokeObjectURL(url);
 }
 
+function practicalBestState(bestByDepth) {
+  let best = bestByDepth[0];
+  bestByDepth.forEach((state) => {
+    if (!state) return;
+    if (state.score < best.score - MIN_DISPLAYED_IMPROVEMENT_MA) best = state;
+  });
+  return best;
+}
+
 function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
   const system = getSystem();
+  const maxPairs = Math.min(swapPairs, MAX_RECOMMENDED_SWAP_PAIRS);
   const initialScore = calculate(original, system).unbalance;
   const bestByDepth = [
     {
@@ -450,6 +467,8 @@ function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
       bestByDepth,
       autoMode,
       autoStopped: true,
+      requestedSwapPairs: swapPairs,
+      maxPairs,
     };
   }
 
@@ -459,13 +478,14 @@ function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
     for (let b = a + 1; b < TOTAL_CAPS; b += 1) pairList.push([a, b]);
   }
 
-  for (let depth = 1; depth <= swapPairs; depth += 1) {
+  for (let depth = 1; depth <= maxPairs; depth += 1) {
     const candidates = [];
     const seenAtDepth = new Set();
 
     frontier.forEach((state) => {
       pairList.forEach(([a, b]) => {
         if (state.usedIndices.has(a) || state.usedIndices.has(b)) return;
+        if (!isMeaningfulSwap(state.layout, a, b)) return;
         const layout = swapLayout(state.layout, a, b);
         const key = layoutKey(layout);
         if (seenAtDepth.has(key)) return;
@@ -491,6 +511,7 @@ function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
     });
 
     frontier = candidates.slice(0, beamWidth);
+    if (frontier.length === 0) break;
     bestByDepth[depth] = frontier[0] || bestByDepth[depth - 1];
     if (autoMode && roundsToDisplayedZero(bestByDepth[depth].score)) {
       return {
@@ -498,15 +519,19 @@ function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
         bestByDepth,
         autoMode,
         autoStopped: true,
+        requestedSwapPairs: swapPairs,
+        maxPairs,
       };
     }
   }
 
   return {
-    best: bestByDepth[swapPairs] || bestByDepth[bestByDepth.length - 1],
+    best: practicalBestState(bestByDepth),
     bestByDepth,
     autoMode,
     autoStopped: false,
+    requestedSwapPairs: swapPairs,
+    maxPairs,
   };
 }
 
@@ -573,7 +598,11 @@ function renderOptimization(result) {
     const note = document.createElement("li");
     note.textContent = result.autoStopped
       ? `Auto selected ${swaps.length} swap pair${swaps.length === 1 ? "" : "s"} because the result rounds to 0.00 mA.`
-      : `Auto searched up to ${result.bestByDepth.length - 1} swap pairs and selected the lowest result found.`;
+      : `Auto searched up to ${result.maxPairs} swap pairs and selected the practical lowest result.`;
+    swapListEl.appendChild(note);
+  } else if (swaps.length < result.requestedSwapPairs) {
+    const note = document.createElement("li");
+    note.textContent = `Selected ${swaps.length} practical swap pair${swaps.length === 1 ? "" : "s"} because extra pairs did not improve the displayed result enough.`;
     swapListEl.appendChild(note);
   }
   let cursorLayout = capacitors.slice();
@@ -671,7 +700,9 @@ csvInputEl.addEventListener("change", () => {
 document.querySelector("#optimize").addEventListener("click", () => {
   syncCapsFromInputs();
   const autoMode = swapPairsEl.value === "auto";
-  const swapPairs = autoMode ? Math.floor(TOTAL_CAPS / 2) : Number.parseInt(swapPairsEl.value, 10);
+  const swapPairs = autoMode
+    ? MAX_RECOMMENDED_SWAP_PAIRS
+    : Number.parseInt(swapPairsEl.value, 10);
   const beamWidth = Number.parseInt(beamWidthEl.value, 10);
   const result = optimizeLayout(capacitors, swapPairs, beamWidth, autoMode);
   renderOptimization(result);
