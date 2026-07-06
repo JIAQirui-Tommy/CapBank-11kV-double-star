@@ -46,7 +46,8 @@ function slotMeta(index) {
 
 function capIdForSlot(index) {
   const meta = slotMeta(index);
-  return `${meta.phase.key}${meta.starIndex + 1}${meta.slotIndex}`;
+  const starKey = meta.starIndex === 0 ? "A" : "B";
+  return `${starKey}${meta.phase.key}${meta.slotIndex}`;
 }
 
 function makeDefaultCaps() {
@@ -125,7 +126,7 @@ function renderBank() {
           <div class="slot-top">
             <span class="cap-id">${cap.id}</span>
             <span class="cap-badge">Moved</span>
-            <span class="cap-pos">${phase.key}${slot + 1}</span>
+            <span class="cap-pos">${cap.id}</span>
           </div>
           <input data-index="${index}" type="number" min="0" step="0.01" value="${cap.uf}" aria-label="${cap.id} capacity microfarads" />
         `;
@@ -182,7 +183,12 @@ function parseCsvRows(text) {
 
 function normalizeCapId(value) {
   const text = String(value ?? "").trim().toUpperCase();
-  return /^[RYB][12][123]$/.test(text) ? text : null;
+  if (/^[AB][RYB][123]$/.test(text)) return text;
+  if (/^[RYB][12][123]$/.test(text)) {
+    const starKey = text[1] === "1" ? "A" : "B";
+    return `${starKey}${text[0]}${text[2]}`;
+  }
+  return null;
 }
 
 function parseCapacity(value) {
