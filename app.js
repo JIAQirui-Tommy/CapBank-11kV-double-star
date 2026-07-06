@@ -13,6 +13,8 @@ const frequencyEl = document.querySelector("#frequency");
 const nominalCapEl = document.querySelector("#nominalCap");
 const swapPairsEl = document.querySelector("#swapPairs");
 const beamWidthEl = document.querySelector("#beamWidth");
+const loadCsvEl = document.querySelector("#loadCsv");
+const csvInputEl = document.querySelector("#csvInput");
 const currentUnbalanceEl = document.querySelector("#currentUnbalance");
 const bestUnbalanceEl = document.querySelector("#bestUnbalance");
 const improvementEl = document.querySelector("#improvement");
@@ -61,7 +63,7 @@ function readNumber(el, fallback) {
 }
 
 function formatMilliAmps(value) {
-  return `${value.toFixed(3)} mA`;
+  return `${value.toFixed(2)} mA`;
 }
 
 function formatPercent(value) {
@@ -72,6 +74,18 @@ function clearRenderedHighlights() {
   document.querySelectorAll(".cap-slot").forEach((slot) => {
     slot.classList.remove("is-moved", "move-a", "move-b", "move-c", "move-d", "move-e", "move-f");
   });
+}
+
+function clearOptimizationState() {
+  lastBest = null;
+  lastSwapRecord = null;
+  appliedHighlights = new Map();
+  applyBestEl.disabled = true;
+  exportRecordEl.disabled = true;
+}
+
+function roundsToDisplayedZero(value) {
+  return Number(value.toFixed(2)) === 0;
 }
 
 function renderBank() {
@@ -130,6 +144,98 @@ function syncCapsFromInputs() {
     const index = Number.parseInt(input.dataset.index, 10);
     capacitors[index].uf = readNumber(input, capacitors[index].uf);
   });
+}
+
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function normalizeCapId(value) {
+  const text = String(value ?? "").trim().toUpperCase();
+  return /^[RYB][12][123]$/.test(text) ? text : null;
+}
+
+function parseCapacity(value) {
+  const text = String(value ?? "").replace(/^\uFEFF/, "").replace(/,/g, "").trim();
+  if (normalizeCapId(text)) return null;
+  const cleaned = text.replace(/\s*(μF|uF|microfarads?|mfd)\s*$/i, "").trim();
+  if (!/^-?\d+(?:\.\d+)?$/.test(cleaned)) return null;
+  const number = Number.parseFloat(cleaned);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function valuesFromCsv(text) {
+  const rows = parseCsvRows(text);
+  const valuesById = new Map();
+  const numericValues = [];
+
+  rows.forEach((row) => {
+    const capColumn = row.findIndex((cell) => normalizeCapId(cell));
+    if (capColumn >= 0) {
+      const capId = normalizeCapId(row[capColumn]);
+      const value = row
+        .map((cell, index) => (index === capColumn ? null : parseCapacity(cell)))
+        .find((number) => number !== null);
+      if (capId && value !== null) valuesById.set(capId, value);
+      return;
+    }
+
+    row.forEach((cell) => {
+      const value = parseCapacity(cell);
+      if (value !== null) numericValues.push(value);
+    });
+  });
+
+  if (capacitors.every((cap) => valuesById.has(cap.id))) {
+    return capacitors.map((cap) => valuesById.get(cap.id));
+  }
+
+  if (numericValues.length >= TOTAL_CAPS) {
+    return numericValues.slice(0, TOTAL_CAPS);
+  }
+
+  throw new Error("CSV must contain 18 capacitance values, either by capacitor ID or in layout order.");
+}
+
+function loadCsvText(text) {
+  const values = valuesFromCsv(text);
+  capacitors = capacitors.map((cap, index) => ({
+    ...cap,
+    uf: values[index],
+  }));
+  clearOptimizationState();
+  renderBank();
+  updateSummary();
 }
 
 function getSystem() {
@@ -253,7 +359,7 @@ function createSwapRecord(bestState) {
     lineKv: readNumber(lineVoltageEl, 11),
     frequency: readNumber(frequencyEl, 50),
     nominalUf: readNumber(nominalCapEl, 22),
-    selectedSwapPairs: Number.parseInt(swapPairsEl.value, 10),
+    selectedSwapPairs: swaps.length,
     beforeUnbalance: before.unbalance,
     afterUnbalance: after.unbalance,
     improvement,
@@ -318,7 +424,7 @@ function exportSwapRecord() {
   URL.revokeObjectURL(url);
 }
 
-function optimizeLayout(original, swapPairs, beamWidth) {
+function optimizeLayout(original, swapPairs, beamWidth, autoMode = false) {
   const system = getSystem();
   const initialScore = calculate(original, system).unbalance;
   const bestByDepth = [
@@ -331,6 +437,15 @@ function optimizeLayout(original, swapPairs, beamWidth) {
       usedIndices: new Set(),
     },
   ];
+
+  if (autoMode && roundsToDisplayedZero(initialScore)) {
+    return {
+      best: bestByDepth[0],
+      bestByDepth,
+      autoMode,
+      autoStopped: true,
+    };
+  }
 
   let frontier = bestByDepth;
   const pairList = [];
@@ -371,9 +486,22 @@ function optimizeLayout(original, swapPairs, beamWidth) {
 
     frontier = candidates.slice(0, beamWidth);
     bestByDepth[depth] = frontier[0] || bestByDepth[depth - 1];
+    if (autoMode && roundsToDisplayedZero(bestByDepth[depth].score)) {
+      return {
+        best: bestByDepth[depth],
+        bestByDepth,
+        autoMode,
+        autoStopped: true,
+      };
+    }
   }
 
-  return { best: bestByDepth[swapPairs] || bestByDepth[bestByDepth.length - 1], bestByDepth };
+  return {
+    best: bestByDepth[swapPairs] || bestByDepth[bestByDepth.length - 1],
+    bestByDepth,
+    autoMode,
+    autoStopped: false,
+  };
 }
 
 function updateSummary(bestState = lastBest) {
@@ -435,6 +563,13 @@ function renderOptimization(result) {
 
   const swaps = swapsFromParents(result.best);
   swapListEl.innerHTML = "";
+  if (result.autoMode) {
+    const note = document.createElement("li");
+    note.textContent = result.autoStopped
+      ? `Auto selected ${swaps.length} swap pair${swaps.length === 1 ? "" : "s"} because the result rounds to 0.00 mA.`
+      : `Auto searched up to ${result.bestByDepth.length - 1} swap pairs and selected the lowest result found.`;
+    swapListEl.appendChild(note);
+  }
   let cursorLayout = capacitors.slice();
   swaps.forEach(([a, b]) => {
     const li = document.createElement("li");
@@ -469,55 +604,70 @@ function loadExample() {
     id: capIdForSlot(index),
     uf,
   }));
-  lastBest = null;
-  lastSwapRecord = null;
-  appliedHighlights = new Map();
-  applyBestEl.disabled = true;
-  exportRecordEl.disabled = true;
+  clearOptimizationState();
   renderBank();
   updateSummary();
 }
 
 function resetLayout() {
   capacitors = makeDefaultCaps();
-  lastBest = null;
-  lastSwapRecord = null;
-  appliedHighlights = new Map();
-  applyBestEl.disabled = true;
-  exportRecordEl.disabled = true;
+  clearOptimizationState();
   renderBank();
   updateSummary();
 }
 
 bankEl.addEventListener("input", () => {
-  lastBest = null;
-  lastSwapRecord = null;
-  appliedHighlights = new Map();
-  applyBestEl.disabled = true;
-  exportRecordEl.disabled = true;
+  clearOptimizationState();
   updateSummary();
   clearRenderedHighlights();
 });
 
 [lineVoltageEl, frequencyEl, nominalCapEl].forEach((el) => {
-  el.addEventListener("input", () => updateSummary(lastBest));
+  el.addEventListener("input", () => {
+    clearOptimizationState();
+    updateSummary();
+    clearRenderedHighlights();
+  });
 });
 
 [swapPairsEl, beamWidthEl].forEach((el) => {
   el.addEventListener("change", () => {
-    lastBest = null;
-    lastSwapRecord = null;
-    applyBestEl.disabled = true;
-    exportRecordEl.disabled = true;
+    clearOptimizationState();
     updateSummary();
+    clearRenderedHighlights();
   });
+});
+
+loadCsvEl.addEventListener("click", () => {
+  csvInputEl.click();
+});
+
+csvInputEl.addEventListener("change", () => {
+  const [file] = csvInputEl.files;
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      loadCsvText(String(reader.result ?? ""));
+    } catch (error) {
+      window.alert(error.message);
+    } finally {
+      csvInputEl.value = "";
+    }
+  });
+  reader.addEventListener("error", () => {
+    window.alert("The CSV file could not be read.");
+    csvInputEl.value = "";
+  });
+  reader.readAsText(file);
 });
 
 document.querySelector("#optimize").addEventListener("click", () => {
   syncCapsFromInputs();
-  const swapPairs = Number.parseInt(swapPairsEl.value, 10);
+  const autoMode = swapPairsEl.value === "auto";
+  const swapPairs = autoMode ? Math.floor(TOTAL_CAPS / 2) : Number.parseInt(swapPairsEl.value, 10);
   const beamWidth = Number.parseInt(beamWidthEl.value, 10);
-  const result = optimizeLayout(capacitors, swapPairs, beamWidth);
+  const result = optimizeLayout(capacitors, swapPairs, beamWidth, autoMode);
   renderOptimization(result);
 });
 
