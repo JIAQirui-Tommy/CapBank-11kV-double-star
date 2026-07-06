@@ -12,8 +12,9 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Capacitor labels follow the pattern `R11`, `R12`, `R13`, `Y11`, `B11`, `R21`, etc.
 - Calculates the neutral unbalance current using the engineering formula from the original project.
 - Searches for capacitor swap recommendations to reduce unbalance current.
-- Allows the user to choose how many swap pairs to apply.
+- Allows the user to choose a fixed number of swap pairs or use Auto mode.
 - Highlights applied swaps with different colors.
+- Loads capacitor values from CSV instead of manual entry.
 - Exports the recommended swap record as a CSV file that can be opened in Excel.
 
 ## Default Settings
@@ -63,7 +64,8 @@ Where:
 - `f` is the frequency in Hz.
 - Branch capacitances are entered in `μF`.
 - The app displays the result in `mA`.
-- The displayed result is rounded up to the next `0.001 mA`.
+- Main results are displayed to `0.00 mA`.
+- Auto mode stops at the smallest swap count whose displayed current rounds to `0.00 mA`.
 
 ## Swap Optimization Logic
 
@@ -76,6 +78,8 @@ For the selected number of swap pairs:
 3. It evaluates each candidate layout using the same unbalance-current formula.
 4. It keeps the best layouts at each depth using the selected search width.
 5. It recommends the layout with the lowest final unbalance current.
+
+In `Auto` mode, the optimizer starts from the smallest swap count and stops as soon as the displayed result rounds to `0.00 mA`. If that target is not reached, it returns the lowest result found within the search limit.
 
 The `Search width` setting controls how many candidate layouts are retained during the search:
 
@@ -99,11 +103,31 @@ The CSV includes:
 - Number of capacitors moved
 - Each recommended swap pair, including capacitor ID, original location, target location, and capacitance
 
+## Loading CSV
+
+Click `Load CSV` to import measured capacitance values.
+
+Supported formats:
+
+```text
+Capacitor,Capacitance uF
+R11,22.10
+R12,21.92
+...
+```
+
+or 18 numeric values in the same order as the on-screen layout:
+
+```text
+22.10,21.92,22.03,21.77,22.14,22.05,22.28,21.88,22.08,
+21.98,22.18,21.86,22.04,21.80,22.16,21.93,22.25,22.01
+```
+
 ## How To Use
 
 1. Open the live app.
 2. Enter the measured capacitance value for each capacitor.
-3. Select the number of swap pairs.
+3. Select the number of swap pairs, or leave it on `Auto`.
 4. Select the search width.
 5. Click `Optimize`.
 6. Review the recommended swaps.
