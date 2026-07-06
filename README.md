@@ -13,6 +13,7 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Calculates the neutral unbalance current using the engineering formula from the original project.
 - Searches for capacitor swap recommendations to reduce unbalance current.
 - Allows the user to choose a fixed number of swap pairs or use Auto mode.
+- Keeps recommendations practical by limiting searches to 4 swap pairs and avoiding same-value swaps.
 - Highlights applied swaps with different colors.
 - Loads capacitor values from CSV instead of manual entry.
 - Exports the recommended swap record as a CSV file that can be opened in Excel.
@@ -65,7 +66,7 @@ Where:
 - Branch capacitances are entered in `μF`.
 - The app displays the result in `mA`.
 - Main results are displayed to `0.00 mA`.
-- Auto mode stops at the smallest swap count whose displayed current rounds to `0.00 mA`.
+- Auto mode checks up to 4 swap pairs and stops at the smallest swap count whose displayed current rounds to `0.00 mA`.
 
 ## Swap Optimization Logic
 
@@ -75,11 +76,12 @@ For the selected number of swap pairs:
 
 1. It generates possible capacitor pair swaps.
 2. It prevents the same capacitor position from being reused in the same recommendation.
-3. It evaluates each candidate layout using the same unbalance-current formula.
-4. It keeps the best layouts at each depth using the selected search width.
-5. It recommends the layout with the lowest final unbalance current.
+3. It skips swaps where the two capacitance values are effectively the same.
+4. It evaluates each candidate layout using the same unbalance-current formula.
+5. It keeps the best layouts at each depth using the selected search width.
+6. It recommends the practical lowest result, preferring fewer pairs unless another pair improves the displayed result by at least `0.01 mA`.
 
-In `Auto` mode, the optimizer starts from the smallest swap count and stops as soon as the displayed result rounds to `0.00 mA`. If that target is not reached, it returns the lowest result found within the search limit.
+In `Auto` mode, the optimizer starts from the smallest swap count and stops as soon as the displayed result rounds to `0.00 mA`. If that target is not reached, it returns the practical lowest result found within 4 swap pairs.
 
 The `Search width` setting controls how many candidate layouts are retained during the search:
 
@@ -129,7 +131,7 @@ or 18 numeric values in the same order as the on-screen layout:
 
 1. Open the live app.
 2. Enter the measured capacitance value for each capacitor.
-3. Select the number of swap pairs, or leave it on `Auto`.
+3. Select up to 4 swap pairs, or leave it on `Auto`.
 4. Select the search width.
 5. Click `Optimize`.
 6. Review the recommended swaps.
