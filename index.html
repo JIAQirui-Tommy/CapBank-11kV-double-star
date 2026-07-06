@@ -14,6 +14,8 @@
           <p>18 capacitors, 2 stars, and 3 capacitors in each R/Y/B branch.</p>
         </div>
         <div class="actions">
+          <button id="loadCsv" type="button" title="Load capacitor values from a CSV file">Load CSV</button>
+          <input id="csvInput" type="file" accept=".csv,text/csv" hidden />
           <button id="loadExample" type="button" title="Load a sample set with realistic tolerance">Example</button>
           <button id="resetLayout" type="button" title="Restore the default layout and nominal capacitance">Reset</button>
         </div>
@@ -35,9 +37,10 @@
         <label>
           <span>Swap pairs</span>
           <select id="swapPairs">
+            <option value="auto" selected>Auto</option>
             <option value="1">1 pair</option>
             <option value="2">2 pairs</option>
-            <option value="3" selected>3 pairs</option>
+            <option value="3">3 pairs</option>
             <option value="4">4 pairs</option>
             <option value="5">5 pairs</option>
             <option value="6">6 pairs</option>
@@ -56,11 +59,11 @@
       <section class="metrics-grid" aria-live="polite">
         <article class="metric">
           <span>Current unbalance current</span>
-          <strong id="currentUnbalance">0.000 mA</strong>
+          <strong id="currentUnbalance">0.00 mA</strong>
         </article>
         <article class="metric">
           <span>Recommended unbalance current</span>
-          <strong id="bestUnbalance">0.000 mA</strong>
+          <strong id="bestUnbalance">0.00 mA</strong>
         </article>
         <article class="metric">
           <span>Improvement</span>
@@ -106,7 +109,8 @@
           The engineering model sums each branch capacitance, calculates <code>S1-S5</code>,
           then uses <code>bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)</code>. The double-star
           neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, shown in
-          <code>mA</code> and rounded up to the next <code>0.001 mA</code>.
+          <code>mA</code>. Auto mode stops at the smallest swap count whose displayed current
+          rounds to <code>0.00 mA</code>.
         </p>
       </section>
     </main>
