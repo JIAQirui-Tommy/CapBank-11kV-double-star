@@ -15,6 +15,7 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Allows the user to choose a fixed number of swap pairs or use Auto mode.
 - Keeps recommendations practical by limiting searches to 4 swap pairs and avoiding same-value swaps.
 - Highlights applied swaps with different colors.
+- Provides a downloadable CSV template for measured capacitance entry.
 - Loads capacitor values from CSV instead of manual entry.
 - Exports the recommended swap record as a CSV file that can be opened in Excel.
 
@@ -107,7 +108,7 @@ The CSV includes:
 
 ## Loading CSV
 
-Click `Load CSV` to import measured capacitance values.
+Click `Template` to download a blank CSV template, fill the measured capacitance values, then click `Load CSV` to import it.
 
 Supported formats:
 
@@ -130,13 +131,14 @@ or 18 numeric values in the same order as the on-screen layout:
 ## How To Use
 
 1. Open the live app.
-2. Enter the measured capacitance value for each capacitor.
-3. Select up to 4 swap pairs, or leave it on `Auto`.
-4. Select the search width.
-5. Click `Optimize`.
-6. Review the recommended swaps.
-7. Click `Apply` to update the on-screen layout.
-8. Click `Export CSV` to save the swap record.
+2. Click `Template` to download the CSV template, or enter values manually.
+3. Fill the measured capacitance values and use `Load CSV` to import them.
+4. Select up to 4 swap pairs, or leave it on `Auto`.
+5. Select the search width.
+6. Click `Optimize`.
+7. Review the recommended swaps.
+8. Click `Apply` to update the on-screen layout.
+9. Click `Export CSV` to save the swap record.
 
 ## Files
 
