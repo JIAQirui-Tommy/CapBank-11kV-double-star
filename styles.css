@@ -224,16 +224,10 @@ select {
   color: var(--muted);
 }
 
-.phase.red .phase-title {
-  color: var(--red);
-}
-
-.phase.yellow .phase-title {
-  color: var(--yellow);
-}
-
+.phase.red .phase-title,
+.phase.yellow .phase-title,
 .phase.blue .phase-title {
-  color: var(--blue);
+  color: var(--ink);
 }
 
 .cap-slot {
