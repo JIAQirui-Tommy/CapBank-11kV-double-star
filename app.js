@@ -39,12 +39,14 @@ function slotMeta(index) {
   const phaseIndex = Math.floor(index / branchSize) % PHASES.length;
   const starIndex = Math.floor(index / (branchSize * PHASES.length));
   const slotIndex = (index % branchSize) + 1;
+  const positionLabel = `L${slotIndex}-${starIndex + 1}`;
   return {
     starIndex,
     starName: STARS[starIndex],
     phase: PHASES[phaseIndex],
     slotIndex,
-    label: `${STARS[starIndex]} ${PHASES[phaseIndex].key}${slotIndex}`,
+    positionLabel,
+    label: `${PHASES[phaseIndex].key} ${positionLabel}`,
   };
 }
 
@@ -126,6 +128,7 @@ function renderBank() {
           starIndex * PHASES.length * SLOTS_PER_BRANCH +
           phaseIndex * SLOTS_PER_BRANCH +
           slot;
+        const meta = slotMeta(index);
         const cap = capacitors[index];
         const highlightClass = appliedHighlights.get(cap.id);
         const slotEl = document.createElement("label");
@@ -134,7 +137,7 @@ function renderBank() {
           <div class="slot-top">
             <span class="cap-id">${cap.id}</span>
             <span class="cap-badge">Moved</span>
-            <span class="cap-pos">${cap.id}</span>
+            <span class="cap-pos">${meta.positionLabel}</span>
           </div>
           <input data-index="${index}" type="number" min="0" step="0.01" value="${cap.uf}" aria-label="${cap.id} capacity microfarads" />
         `;
@@ -453,8 +456,13 @@ function downloadCsv(filename, rows) {
 
 function downloadTemplate() {
   const rows = [
-    ["Cap Unit", "Value (in uF)", "Unit"],
-    ...Array.from({ length: TOTAL_CAPS }, (_, index) => [capIdForSlot(index), "", "uF"]),
+    ["Cap Unit", "Position", "Value (in uF)", "Unit"],
+    ...Array.from({ length: TOTAL_CAPS }, (_, index) => [
+      capIdForSlot(index),
+      slotMeta(index).positionLabel,
+      "",
+      "uF",
+    ]),
   ];
   downloadCsv("capbank-capacitance-template.csv", rows);
 }
