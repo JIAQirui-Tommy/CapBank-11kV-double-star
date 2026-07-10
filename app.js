@@ -16,6 +16,7 @@ const frequencyEl = document.querySelector("#frequency");
 const nominalCapEl = document.querySelector("#nominalCap");
 const swapPairsEl = document.querySelector("#swapPairs");
 const beamWidthEl = document.querySelector("#beamWidth");
+const downloadTemplateEl = document.querySelector("#downloadTemplate");
 const loadCsvEl = document.querySelector("#loadCsv");
 const csvInputEl = document.querySelector("#csvInput");
 const currentUnbalanceEl = document.querySelector("#currentUnbalance");
@@ -437,6 +438,27 @@ function exportSwapRecord() {
   URL.revokeObjectURL(url);
 }
 
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadTemplate() {
+  const rows = [
+    ["Cap Unit", "Value (in uF)", "Unit"],
+    ...Array.from({ length: TOTAL_CAPS }, (_, index) => [capIdForSlot(index), "", "uF"]),
+  ];
+  downloadCsv("capbank-capacitance-template.csv", rows);
+}
+
 function practicalBestState(bestByDepth) {
   let best = bestByDepth[0];
   bestByDepth.forEach((state) => {
@@ -676,6 +698,8 @@ bankEl.addEventListener("input", () => {
 loadCsvEl.addEventListener("click", () => {
   csvInputEl.click();
 });
+
+downloadTemplateEl.addEventListener("click", downloadTemplate);
 
 csvInputEl.addEventListener("change", () => {
   const [file] = csvInputEl.files;
