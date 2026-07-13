@@ -10,7 +10,7 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Each star has three branches: Red, Yellow, and Blue.
 - Each branch contains three capacitors.
 - Capacitor labels follow the pattern `AR1`, `AR2`, `AY1`, `AB1`, `BR1`, `BY1`, `BB1`, etc.
-- On-screen position labels follow the field layout pattern `L1-1`, `L2-1`, `L3-1` for Star 1 and `L1-2`, `L2-2`, `L3-2` for Star 2.
+- On-screen position labels follow the phase-first field layout: Red phase uses `L1-1` to `L1-6`, Yellow phase uses `L2-1` to `L2-6`, and Blue phase uses `L3-1` to `L3-6`.
 - Calculates the neutral unbalance current using the engineering formula from the original project.
 - Searches for capacitor swap recommendations to reduce unbalance current.
 - Allows the user to choose a fixed number of swap pairs or use Auto mode.
@@ -121,9 +121,9 @@ Supported formats:
 ```text
 Cap Unit,Position,Value (in uF),Unit
 AR1,L1-1,24.40,uF
-AR2,L2-1,25.30,uF
-AR3,L3-1,24.60,uF
-AY1,L1-1,25.20,uF
+AR2,L1-2,25.30,uF
+AR3,L1-3,24.60,uF
+AY1,L2-1,25.20,uF
 ...
 ```
 
@@ -140,7 +140,7 @@ or 18 numeric values in the same order as the on-screen layout:
 2. Click `Template` to download the CSV template, or enter values manually.
 3. Fill the measured capacitance values and use `Load CSV` to import them.
 4. Set the CT ratio as `X:1` if secondary-side current is required.
-5. Use the configuration guide to match `AR/AY/AB/BR/BY/BB` and `L1-1` style position labels to the field layout.
+5. Use the configuration guide to match `AR/AY/AB/BR/BY/BB` and the `L1/L2/L3` phase-first position labels to the field layout.
 6. Select up to 4 swap pairs, or leave it on `Auto`.
 7. Select the search width.
 8. Click `Optimize`.
