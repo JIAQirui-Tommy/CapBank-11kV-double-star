@@ -14,13 +14,16 @@ const bankEl = document.querySelector("#bank");
 const lineVoltageEl = document.querySelector("#lineVoltage");
 const frequencyEl = document.querySelector("#frequency");
 const nominalCapEl = document.querySelector("#nominalCap");
+const ctRatioEl = document.querySelector("#ctRatio");
 const swapPairsEl = document.querySelector("#swapPairs");
 const beamWidthEl = document.querySelector("#beamWidth");
 const downloadTemplateEl = document.querySelector("#downloadTemplate");
 const loadCsvEl = document.querySelector("#loadCsv");
 const csvInputEl = document.querySelector("#csvInput");
-const currentUnbalanceEl = document.querySelector("#currentUnbalance");
-const bestUnbalanceEl = document.querySelector("#bestUnbalance");
+const currentPrimaryUnbalanceEl = document.querySelector("#currentPrimaryUnbalance");
+const bestPrimaryUnbalanceEl = document.querySelector("#bestPrimaryUnbalance");
+const currentSecondaryUnbalanceEl = document.querySelector("#currentSecondaryUnbalance");
+const bestSecondaryUnbalanceEl = document.querySelector("#bestSecondaryUnbalance");
 const improvementEl = document.querySelector("#improvement");
 const movedCountEl = document.querySelector("#movedCount");
 const swapListEl = document.querySelector("#swapList");
@@ -75,6 +78,10 @@ function formatMilliAmps(value) {
 
 function formatPercent(value) {
   return `${value.toFixed(1)}%`;
+}
+
+function readCtRatio() {
+  return Math.max(0.01, readNumber(ctRatioEl, 1));
 }
 
 function clearRenderedHighlights() {
@@ -259,6 +266,7 @@ function getSystem() {
   return {
     lineKv: readNumber(lineVoltageEl, 11),
     frequency: readNumber(frequencyEl, 50),
+    ctRatio: readCtRatio(),
   };
 }
 
@@ -289,6 +297,8 @@ function calculate(layout, system = getSystem()) {
 
   const rawUnbalance = x > 0 ? (0.001 * lineVoltage * omega * bal) / (2 * x) : 0;
   const unbalance = Math.ceil(rawUnbalance * 1000) / 1000;
+  const secondaryUnbalance = unbalance / system.ctRatio;
+  const rawSecondaryUnbalance = rawUnbalance / system.ctRatio;
 
   const engineering = {
     ar,
@@ -307,10 +317,12 @@ function calculate(layout, system = getSystem()) {
     imagTerm,
     bal,
     rawUnbalance,
+    rawSecondaryUnbalance,
   };
 
   return {
     unbalance,
+    secondaryUnbalance,
     branchUf,
     engineering,
   };
@@ -375,10 +387,13 @@ function createSwapRecord(bestState) {
     createdAt: new Date().toISOString(),
     lineKv: readNumber(lineVoltageEl, 11),
     frequency: readNumber(frequencyEl, 50),
+    ctRatio: readCtRatio(),
     nominalUf: readNumber(nominalCapEl, 22),
     selectedSwapPairs: swaps.length,
-    beforeUnbalance: before.unbalance,
-    afterUnbalance: after.unbalance,
+    beforePrimaryUnbalance: before.unbalance,
+    afterPrimaryUnbalance: after.unbalance,
+    beforeSecondaryUnbalance: before.secondaryUnbalance,
+    afterSecondaryUnbalance: after.secondaryUnbalance,
     improvement,
     movedCount: movedFromOriginal(finalLayout, initialLayout),
     rows: buildSwapRows(initialLayout, swaps),
@@ -397,10 +412,13 @@ function exportSwapRecord() {
     ["Created At", lastSwapRecord.createdAt],
     ["Line Voltage kV", lastSwapRecord.lineKv],
     ["Frequency Hz", lastSwapRecord.frequency],
+    ["CT Ratio X:1", lastSwapRecord.ctRatio],
     ["Nominal Capacitance uF", lastSwapRecord.nominalUf],
     ["Selected Swap Pairs", lastSwapRecord.selectedSwapPairs],
-    ["Before Unbalance mA", lastSwapRecord.beforeUnbalance.toFixed(6)],
-    ["After Unbalance mA", lastSwapRecord.afterUnbalance.toFixed(6)],
+    ["Before Primary Unbalance mA", lastSwapRecord.beforePrimaryUnbalance.toFixed(6)],
+    ["After Primary Unbalance mA", lastSwapRecord.afterPrimaryUnbalance.toFixed(6)],
+    ["Before Secondary Unbalance mA", lastSwapRecord.beforeSecondaryUnbalance.toFixed(6)],
+    ["After Secondary Unbalance mA", lastSwapRecord.afterSecondaryUnbalance.toFixed(6)],
     ["Improvement %", lastSwapRecord.improvement.toFixed(3)],
     ["Capacitors Moved", lastSwapRecord.movedCount],
     [],
@@ -572,8 +590,10 @@ function updateSummary(bestState = lastBest) {
   const improvement =
     current.unbalance > 0 ? ((current.unbalance - best.unbalance) / current.unbalance) * 100 : 0;
 
-  currentUnbalanceEl.textContent = formatMilliAmps(current.unbalance);
-  bestUnbalanceEl.textContent = formatMilliAmps(best.unbalance);
+  currentPrimaryUnbalanceEl.textContent = formatMilliAmps(current.unbalance);
+  bestPrimaryUnbalanceEl.textContent = formatMilliAmps(best.unbalance);
+  currentSecondaryUnbalanceEl.textContent = formatMilliAmps(current.secondaryUnbalance);
+  bestSecondaryUnbalanceEl.textContent = formatMilliAmps(best.secondaryUnbalance);
   improvementEl.textContent = formatPercent(Math.max(0, improvement));
   movedCountEl.textContent = `${bestState ? movedFromOriginal(bestState.layout, capacitors) : 0}`;
 
@@ -600,6 +620,7 @@ function renderDetails(result) {
   const e = result.engineering;
   const rows = [
     ["Phase voltage", `${phaseVoltage.toFixed(3)} kV`],
+    ["CT ratio", `${readCtRatio().toFixed(2)}:1`],
     ["AR / AY / AB", `${e.ar.toFixed(3)} / ${e.ay.toFixed(3)} / ${e.ab.toFixed(3)} μF`],
     ["BR / BY / BB", `${e.br.toFixed(3)} / ${e.by.toFixed(3)} / ${e.bb.toFixed(3)} μF`],
     ["X total", `${e.x.toFixed(3)} μF`],
@@ -608,8 +629,9 @@ function renderDetails(result) {
     ["Real term", `${e.realTerm.toFixed(6)}`],
     ["Imag term", `${e.imagTerm.toFixed(6)}`],
     ["bal", `${e.bal.toFixed(6)}`],
-    ["Raw unbalance", formatMilliAmps(e.rawUnbalance)],
-    ["Displayed unbalance", formatMilliAmps(result.unbalance)],
+    ["Raw primary unbalance", formatMilliAmps(e.rawUnbalance)],
+    ["Displayed primary unbalance", formatMilliAmps(result.unbalance)],
+    ["Displayed secondary unbalance", formatMilliAmps(result.secondaryUnbalance)],
   ];
   detailListEl.innerHTML = rows
     .map(([label, value]) => `<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`)
@@ -687,7 +709,7 @@ bankEl.addEventListener("input", () => {
   clearRenderedHighlights();
 });
 
-[lineVoltageEl, frequencyEl, nominalCapEl].forEach((el) => {
+[lineVoltageEl, frequencyEl, nominalCapEl, ctRatioEl].forEach((el) => {
   el.addEventListener("input", () => {
     clearOptimizationState();
     updateSummary();
