@@ -42,12 +42,14 @@ function slotMeta(index) {
   const phaseIndex = Math.floor(index / branchSize) % PHASES.length;
   const starIndex = Math.floor(index / (branchSize * PHASES.length));
   const slotIndex = (index % branchSize) + 1;
-  const positionLabel = `L${slotIndex}-${starIndex + 1}`;
+  const positionIndex = starIndex * SLOTS_PER_BRANCH + slotIndex;
+  const positionLabel = `L${phaseIndex + 1}-${positionIndex}`;
   return {
     starIndex,
     starName: STARS[starIndex],
     phase: PHASES[phaseIndex],
     slotIndex,
+    positionIndex,
     positionLabel,
     label: `${PHASES[phaseIndex].key} ${positionLabel}`,
   };
