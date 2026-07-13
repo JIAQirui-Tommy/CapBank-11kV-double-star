@@ -36,6 +36,10 @@
           <input id="nominalCap" type="number" min="0" step="0.01" value="22" />
         </label>
         <label>
+          <span>CT ratio X:1</span>
+          <input id="ctRatio" type="number" min="0.01" step="0.01" value="1" />
+        </label>
+        <label>
           <span>Swap pairs</span>
           <select id="swapPairs">
             <option value="auto" selected>Auto</option>
@@ -57,12 +61,20 @@
 
       <section class="metrics-grid" aria-live="polite">
         <article class="metric">
-          <span>Current unbalance current</span>
-          <strong id="currentUnbalance">0.00 mA</strong>
+          <span>Current primary unbalance current</span>
+          <strong id="currentPrimaryUnbalance">0.00 mA</strong>
         </article>
         <article class="metric">
-          <span>Recommended unbalance current</span>
-          <strong id="bestUnbalance">0.00 mA</strong>
+          <span>Recommended primary unbalance current</span>
+          <strong id="bestPrimaryUnbalance">0.00 mA</strong>
+        </article>
+        <article class="metric">
+          <span>Current secondary unbalance current</span>
+          <strong id="currentSecondaryUnbalance">0.00 mA</strong>
+        </article>
+        <article class="metric">
+          <span>Recommended secondary unbalance current</span>
+          <strong id="bestSecondaryUnbalance">0.00 mA</strong>
         </article>
         <article class="metric">
           <span>Improvement</span>
@@ -72,6 +84,70 @@
           <span>Capacitors moved</span>
           <strong id="movedCount">0</strong>
         </article>
+      </section>
+
+      <section class="layout-guide" aria-label="Configuration guide">
+        <div class="guide-head">
+          <div>
+            <h2>Configuration Guide</h2>
+            <p>Use the large unit ID for CSV entry and the small L-position label to match the physical layout.</p>
+          </div>
+          <div class="guide-legend" aria-label="Phase colors">
+            <span><i class="legend-red"></i>R phase</span>
+            <span><i class="legend-yellow"></i>Y phase</span>
+            <span><i class="legend-blue"></i>B phase</span>
+          </div>
+        </div>
+        <div class="guide-board">
+          <div class="guide-phase guide-red">
+            <h3>R Phase</h3>
+            <div class="guide-star">
+              <strong>Star 1 / AR</strong>
+              <span>AR1 <small>L1-1</small></span>
+              <span>AR2 <small>L2-1</small></span>
+              <span>AR3 <small>L3-1</small></span>
+            </div>
+            <div class="guide-rail"></div>
+            <div class="guide-star">
+              <strong>Star 2 / BR</strong>
+              <span>BR1 <small>L1-2</small></span>
+              <span>BR2 <small>L2-2</small></span>
+              <span>BR3 <small>L3-2</small></span>
+            </div>
+          </div>
+          <div class="guide-phase guide-yellow">
+            <h3>Y Phase</h3>
+            <div class="guide-star">
+              <strong>Star 1 / AY</strong>
+              <span>AY1 <small>L1-1</small></span>
+              <span>AY2 <small>L2-1</small></span>
+              <span>AY3 <small>L3-1</small></span>
+            </div>
+            <div class="guide-rail"></div>
+            <div class="guide-star">
+              <strong>Star 2 / BY</strong>
+              <span>BY1 <small>L1-2</small></span>
+              <span>BY2 <small>L2-2</small></span>
+              <span>BY3 <small>L3-2</small></span>
+            </div>
+          </div>
+          <div class="guide-phase guide-blue">
+            <h3>B Phase</h3>
+            <div class="guide-star">
+              <strong>Star 1 / AB</strong>
+              <span>AB1 <small>L1-1</small></span>
+              <span>AB2 <small>L2-1</small></span>
+              <span>AB3 <small>L3-1</small></span>
+            </div>
+            <div class="guide-rail"></div>
+            <div class="guide-star">
+              <strong>Star 2 / BB</strong>
+              <span>BB1 <small>L1-2</small></span>
+              <span>BB2 <small>L2-2</small></span>
+              <span>BB3 <small>L3-2</small></span>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="work-area">
@@ -108,12 +184,14 @@
           The engineering model sums each branch capacitance, calculates <code>S1-S5</code>,
           then uses <code>bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)</code>. The double-star
           neutral unbalance current is <code>0.001 * V * 2πf * bal / (2X)</code>, shown in
-          <code>mA</code>. Auto mode checks up to 4 swap pairs, skips same-value swaps, and
-          stops at the smallest swap count whose displayed current rounds to <code>0.00 mA</code>.
+          primary-side <code>mA</code>. Secondary-side current is
+          <code>primary current / CT ratio</code>. Auto mode checks up to 4 swap pairs, skips
+          same-value swaps, and stops at the smallest swap count whose displayed primary current
+          rounds to <code>0.00 mA</code>.
         </p>
       </section>
     </main>
 
-    <script src="./app.js?v=position-labels-1"></script>
+    <script src="./app.js?v=ct-visual-guide-1"></script>
   </body>
 </html>
