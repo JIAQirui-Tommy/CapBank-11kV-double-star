@@ -623,15 +623,6 @@ function renderDetails(result) {
     ["CT ratio", `${readCtRatio().toFixed(2)}:1`],
     ["AR / AY / AB", `${e.ar.toFixed(3)} / ${e.ay.toFixed(3)} / ${e.ab.toFixed(3)} μF`],
     ["BR / BY / BB", `${e.br.toFixed(3)} / ${e.by.toFixed(3)} / ${e.bb.toFixed(3)} μF`],
-    ["X total", `${e.x.toFixed(3)} μF`],
-    ["S1 / S2 / S3", `${e.s1.toFixed(6)} / ${e.s2.toFixed(6)} / ${e.s3.toFixed(6)}`],
-    ["S4 / S5", `${e.s4.toFixed(6)} / ${e.s5.toFixed(6)}`],
-    ["Real term", `${e.realTerm.toFixed(6)}`],
-    ["Imag term", `${e.imagTerm.toFixed(6)}`],
-    ["bal", `${e.bal.toFixed(6)}`],
-    ["Raw primary unbalance", formatMilliAmps(e.rawUnbalance)],
-    ["Displayed primary unbalance", formatMilliAmps(result.unbalance)],
-    ["Displayed secondary unbalance", formatMilliAmps(result.secondaryUnbalance)],
   ];
   detailListEl.innerHTML = rows
     .map(([label, value]) => `<div class="detail-item"><span>${label}</span><strong>${value}</strong></div>`)
