@@ -25,6 +25,7 @@ Live app: https://jiaqirui-tommy.github.io/CapBank-11kV-double-star/
 - Line voltage: `11 kV`
 - Frequency: `50 Hz`
 - Nominal capacitance: `22 μF`
+- CT ratio: `1:1`
 - Displayed unbalance current unit: `mA`
 
 If the original engineering input uses `11300 V`, set the line voltage in the app to `11.3 kV`.
@@ -58,17 +59,19 @@ bal = sqrt((S1 + S2 + 2S3)^2 + 3(S4 - S5)^2)
 The neutral unbalance current is calculated as:
 
 ```text
-I_unbalance = 0.001 * V * 2πf * bal / (2X)
+I_primary = 0.001 * V * 2πf * bal / (2X)
+I_secondary = I_primary / CT ratio
 ```
 
 Where:
 
 - `V` is the line voltage in volts.
 - `f` is the frequency in Hz.
+- `CT ratio` is entered as `X:1`; the default is `1:1`.
 - Branch capacitances are entered in `μF`.
-- The app displays the result in `mA`.
+- The app displays both primary-side and secondary-side current in `mA`.
 - Main results are displayed to `0.00 mA`.
-- Auto mode checks up to 4 swap pairs and stops at the smallest swap count whose displayed current rounds to `0.00 mA`.
+- Auto mode checks up to 4 swap pairs and stops at the smallest swap count whose displayed primary current rounds to `0.00 mA`.
 
 ## Swap Optimization Logic
 
@@ -100,9 +103,11 @@ The CSV includes:
 - Created time
 - Line voltage
 - Frequency
+- CT ratio
 - Nominal capacitance
 - Selected swap-pair count
-- Before and after unbalance current in `mA`
+- Before and after primary unbalance current in `mA`
+- Before and after secondary unbalance current in `mA`
 - Improvement percentage
 - Number of capacitors moved
 - Each recommended swap pair, including capacitor ID, original location, target location, and capacitance
@@ -134,12 +139,14 @@ or 18 numeric values in the same order as the on-screen layout:
 1. Open the live app.
 2. Click `Template` to download the CSV template, or enter values manually.
 3. Fill the measured capacitance values and use `Load CSV` to import them.
-4. Select up to 4 swap pairs, or leave it on `Auto`.
-5. Select the search width.
-6. Click `Optimize`.
-7. Review the recommended swaps.
-8. Click `Apply` to update the on-screen layout.
-9. Click `Export CSV` to save the swap record.
+4. Set the CT ratio as `X:1` if secondary-side current is required.
+5. Use the configuration guide to match `AR/AY/AB/BR/BY/BB` and `L1-1` style position labels to the field layout.
+6. Select up to 4 swap pairs, or leave it on `Auto`.
+7. Select the search width.
+8. Click `Optimize`.
+9. Review the recommended swaps.
+10. Click `Apply` to update the on-screen layout.
+11. Click `Export CSV` to save the swap record.
 
 ## Files
 
